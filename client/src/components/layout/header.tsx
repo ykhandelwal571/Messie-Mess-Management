@@ -37,10 +37,10 @@ export function Header() {
     <header className="bg-white shadow-md px-4 py-3 flex items-center justify-between">
       <div className="flex items-center space-x-2">
         <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold">MM</span>
+          <span className="text-white font-bold">MS</span>
         </div>
-        <h1 className="font-heading font-bold text-xl text-foreground">Mess Management</h1>
-      </div>
+        <h1 className="font-heading font-bold text-xl text-foreground">Messie</h1>
+      </div>  
 
       <div className="flex items-center gap-4">
         <div className="md:hidden">

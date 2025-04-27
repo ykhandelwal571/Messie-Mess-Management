@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { Users, CalendarCheck, MessageSquare, Utensils } from "lucide-react";
+import { Star } from "lucide-react"; // Added this import for the Star component
 import {
   Table,
   TableBody,
