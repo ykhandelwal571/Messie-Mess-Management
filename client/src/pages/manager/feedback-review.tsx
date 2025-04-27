@@ -22,7 +22,7 @@ export default function FeedbackReview() {
   const [ratingFilter, setRatingFilter] = useState("all");
 
   // Fetch feedback data
-  const { data: feedbackData, isLoading } = useQuery({
+  const { data: feedbackData = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/feedback"],
   });
 
@@ -52,21 +52,19 @@ export default function FeedbackReview() {
   };
 
   // Filter feedback data
-  const filteredFeedback = feedbackData
-    ? feedbackData.filter((feedback: any) => {
-        // Filter by search query
-        const matchesSearch = searchQuery
-          ? feedback.user?.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            feedback.comment?.toLowerCase().includes(searchQuery.toLowerCase())
-          : true;
-        
-        // Filter by rating
-        const matchesRating =
-          ratingFilter === "all" ? true : Number(ratingFilter) === feedback.rating;
-        
-        return matchesSearch && matchesRating;
-      })
-    : [];
+  const filteredFeedback = feedbackData.filter((feedback: any) => {
+    // Filter by search query
+    const matchesSearch = searchQuery
+      ? feedback.user?.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        feedback.comment?.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+    
+    // Filter by rating
+    const matchesRating =
+      ratingFilter === "all" ? true : Number(ratingFilter) === feedback.rating;
+    
+    return matchesSearch && matchesRating;
+  });
 
   // Calculate rating statistics
   const calculateStats = () => {

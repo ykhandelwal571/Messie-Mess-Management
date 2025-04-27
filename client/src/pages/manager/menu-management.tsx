@@ -74,7 +74,7 @@ export default function MenuManagement() {
   // Fetch weekly menu
   const startDate = format(weekDays[0].date, "yyyy-MM-dd");
   const endDate = format(weekDays[6].date, "yyyy-MM-dd");
-  const { data: weeklyMenus, isLoading } = useQuery({
+  const { data: weeklyMenus = [], isLoading } = useQuery<any[]>({
     queryKey: [`/api/menus?startDate=${startDate}&endDate=${endDate}`],
   });
 
@@ -92,11 +92,14 @@ export default function MenuManagement() {
   // Create menu mutation
   const createMenuMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Convert items string to array
+      // Convert items string to array and ensure date is a proper Date object
       const formattedData = {
         ...data,
+        date: new Date(data.date),
         items: data.items.split('\n').filter((item: string) => item.trim() !== ""),
       };
+      
+      console.log("Sending menu data:", formattedData);
       const res = await apiRequest("POST", "/api/menus", formattedData);
       return await res.json();
     },
@@ -121,11 +124,13 @@ export default function MenuManagement() {
   // Update menu mutation
   const updateMenuMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: any }) => {
-      // Convert items string to array
+      // Convert items string to array and ensure date is a proper Date object
       const formattedData = {
         ...data,
+        date: new Date(data.date),
         items: data.items.split('\n').filter((item: string) => item.trim() !== ""),
       };
+      console.log("Updating menu data:", formattedData);
       const res = await apiRequest("PUT", `/api/menus/${id}`, formattedData);
       return await res.json();
     },
@@ -186,7 +191,6 @@ export default function MenuManagement() {
 
   // Get menus for a specific day
   const getMenusForDay = (date: string) => {
-    if (!weeklyMenus) return [];
     return weeklyMenus.filter((menu: any) => 
       format(new Date(menu.date), "yyyy-MM-dd") === date
     );
