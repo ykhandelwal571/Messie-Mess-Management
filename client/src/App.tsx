@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import { ProtectedRoute } from "./lib/protected-route";
+import { useAuth } from "@/hooks/use-auth";
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -37,13 +38,14 @@ function Router() {
 
       {/* Default route - redirect based on role */}
       <ProtectedRoute path="/" component={() => {
-        const userRole = localStorage.getItem("userRole");
-        if (userRole === "manager") {
-          window.location.href = "/manager/dashboard";
+        // The useAuth will automatically handle redirection based on authentication status
+        // We just need to redirect based on role here
+        const { user } = useAuth();
+        if (user?.role === "manager") {
+          return <Redirect to="/manager/dashboard" />;
         } else {
-          window.location.href = "/customer/dashboard";
+          return <Redirect to="/customer/dashboard" />;
         }
-        return null;
       }} />
 
       {/* Fallback to 404 */}
