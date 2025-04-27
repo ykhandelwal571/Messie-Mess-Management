@@ -3,12 +3,17 @@ import {
   Attendance, InsertAttendance, 
   Menu, InsertMenu, 
   Feedback, InsertFeedback, 
-  MessInfo, InsertMessInfo 
+  MessInfo, InsertMessInfo,
+  users, attendances, menus, feedbacks, messInfos
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { db, pool } from "./db";
+import { eq, and, gte, lte } from "drizzle-orm";
 
 const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // User methods
@@ -45,7 +50,7 @@ export interface IStorage {
   updateMessInfo(messInfo: Partial<InsertMessInfo>): Promise<MessInfo | undefined>;
   
   // Session store for auth
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Using any to avoid typing issues with session store
 }
 
 export class MemStorage implements IStorage {
@@ -58,7 +63,7 @@ export class MemStorage implements IStorage {
   private attendanceIdCounter: number;
   private menuIdCounter: number;
   private feedbackIdCounter: number;
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Using any for SessionStore
 
   constructor() {
     this.users = new Map();
@@ -250,4 +255,211 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database Storage implementation
+export class DatabaseStorage implements IStorage {
+  sessionStore: any; // Using any for SessionStore
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
+    });
+  }
+
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async getUsersByRole(role: string): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.role, role));
+  }
+
+  // Attendance methods
+  async createAttendance(insertAttendance: InsertAttendance): Promise<Attendance> {
+    const [attendance] = await db.insert(attendances).values(insertAttendance).returning();
+    return attendance;
+  }
+
+  async getAttendanceByUserId(userId: number): Promise<Attendance[]> {
+    return await db.select().from(attendances).where(eq(attendances.userId, userId));
+  }
+
+  async getAttendanceByDate(date: Date): Promise<Attendance[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return await db.select()
+      .from(attendances)
+      .where(
+        and(
+          gte(attendances.date, startOfDay),
+          lte(attendances.date, endOfDay)
+        )
+      );
+  }
+
+  async getAttendanceByDateRange(startDate: Date, endDate: Date): Promise<Attendance[]> {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    
+    return await db.select()
+      .from(attendances)
+      .where(
+        and(
+          gte(attendances.date, start),
+          lte(attendances.date, end)
+        )
+      );
+  }
+
+  async updateAttendance(id: number, status: boolean): Promise<Attendance | undefined> {
+    const [attendance] = await db
+      .update(attendances)
+      .set({ status })
+      .where(eq(attendances.id, id))
+      .returning();
+    return attendance;
+  }
+
+  // Menu methods
+  async createMenu(insertMenu: InsertMenu): Promise<Menu> {
+    const [menu] = await db.insert(menus).values(insertMenu).returning();
+    return menu;
+  }
+
+  async getMenuById(id: number): Promise<Menu | undefined> {
+    const [menu] = await db.select().from(menus).where(eq(menus.id, id));
+    return menu;
+  }
+
+  async getMenusByDate(date: Date): Promise<Menu[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return await db.select()
+      .from(menus)
+      .where(
+        and(
+          gte(menus.date, startOfDay),
+          lte(menus.date, endOfDay)
+        )
+      );
+  }
+
+  async getMenusByDateRange(startDate: Date, endDate: Date): Promise<Menu[]> {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    
+    return await db.select()
+      .from(menus)
+      .where(
+        and(
+          gte(menus.date, start),
+          lte(menus.date, end)
+        )
+      );
+  }
+
+  async updateMenu(id: number, menuData: Partial<InsertMenu>): Promise<Menu | undefined> {
+    const [menu] = await db
+      .update(menus)
+      .set(menuData)
+      .where(eq(menus.id, id))
+      .returning();
+    return menu;
+  }
+
+  async deleteMenu(id: number): Promise<boolean> {
+    const result = await db.delete(menus).where(eq(menus.id, id));
+    return true; // Since we can't easily get the affected rows, just return true
+  }
+
+  // Feedback methods
+  async createFeedback(insertFeedback: InsertFeedback): Promise<Feedback> {
+    const [feedback] = await db.insert(feedbacks).values(insertFeedback).returning();
+    return feedback;
+  }
+
+  async getFeedbackById(id: number): Promise<Feedback | undefined> {
+    const [feedback] = await db.select().from(feedbacks).where(eq(feedbacks.id, id));
+    return feedback;
+  }
+
+  async getFeedbackByUserId(userId: number): Promise<Feedback[]> {
+    return await db.select().from(feedbacks).where(eq(feedbacks.userId, userId));
+  }
+
+  async getFeedbackByMenuId(menuId: number): Promise<Feedback[]> {
+    return await db.select().from(feedbacks).where(eq(feedbacks.menuId, menuId));
+  }
+
+  async getAllFeedback(): Promise<Feedback[]> {
+    return await db.select().from(feedbacks);
+  }
+
+  // MessInfo methods
+  async getMessInfo(): Promise<MessInfo | undefined> {
+    const [messInfo] = await db.select().from(messInfos);
+    return messInfo;
+  }
+
+  async updateMessInfo(info: Partial<InsertMessInfo>): Promise<MessInfo | undefined> {
+    const existingMessInfo = await this.getMessInfo();
+    
+    if (existingMessInfo) {
+      const [updatedMessInfo] = await db
+        .update(messInfos)
+        .set(info)
+        .where(eq(messInfos.id, existingMessInfo.id))
+        .returning();
+      return updatedMessInfo;
+    } else {
+      // Create if it doesn't exist
+      const [messInfo] = await db
+        .insert(messInfos)
+        .values({
+          name: info.name || "Campus Mess",
+          description: info.description || "The main mess facility for the campus",
+          operatingHours: info.operatingHours || {
+            breakfast: { open: "7:00 AM", close: "9:30 AM" },
+            lunch: { open: "12:00 PM", close: "2:30 PM" },
+            dinner: { open: "7:00 PM", close: "9:30 PM" }
+          },
+          contactInfo: info.contactInfo || "Email: mess@campus.edu | Phone: (123) 456-7890"
+        })
+        .returning();
+      return messInfo;
+    }
+  }
+}
+
+// Use database storage instead of memory storage
+export const storage = new DatabaseStorage();

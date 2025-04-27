@@ -1,5 +1,6 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { relations } from "drizzle-orm";
 import { z } from "zod";
 
 // User model
@@ -11,6 +12,11 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("customer"), // 'customer' or 'manager'
 });
 
+export const usersRelations = relations(users, ({ many }) => ({
+  attendances: many(attendances),
+  feedbacks: many(feedbacks),
+}));
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -21,10 +27,17 @@ export const insertUserSchema = createInsertSchema(users).pick({
 // Attendance model
 export const attendances = pgTable("attendances", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   date: timestamp("date").notNull().defaultNow(),
   status: boolean("status").notNull().default(true), // true = present, false = absent
 });
+
+export const attendancesRelations = relations(attendances, ({ one }) => ({
+  user: one(users, {
+    fields: [attendances.userId],
+    references: [users.id],
+  })
+}));
 
 export const insertAttendanceSchema = createInsertSchema(attendances).pick({
   userId: true,
@@ -41,6 +54,10 @@ export const menus = pgTable("menus", {
   description: text("description"),
 });
 
+export const menusRelations = relations(menus, ({ many }) => ({
+  feedbacks: many(feedbacks),
+}));
+
 export const insertMenuSchema = createInsertSchema(menus).pick({
   date: true,
   type: true,
@@ -51,12 +68,23 @@ export const insertMenuSchema = createInsertSchema(menus).pick({
 // Feedback model
 export const feedbacks = pgTable("feedbacks", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   date: timestamp("date").notNull().defaultNow(),
   rating: integer("rating").notNull(), // 1-5 stars
   comment: text("comment"),
-  menuId: integer("menu_id"), // optional, can be related to a specific menu
+  menuId: integer("menu_id").references(() => menus.id, { onDelete: 'set null' }), // optional, can be related to a specific menu
 });
+
+export const feedbacksRelations = relations(feedbacks, ({ one }) => ({
+  user: one(users, {
+    fields: [feedbacks.userId],
+    references: [users.id],
+  }),
+  menu: one(menus, {
+    fields: [feedbacks.menuId],
+    references: [menus.id],
+  }),
+}));
 
 export const insertFeedbackSchema = createInsertSchema(feedbacks).pick({
   userId: true,
