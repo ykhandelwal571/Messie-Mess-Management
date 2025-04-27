@@ -93,10 +93,14 @@ export default function MenuManagement() {
   const createMenuMutation = useMutation({
     mutationFn: async (data: any) => {
       // Convert items string to array and ensure date is a proper Date object
+      // The server expects items to be a valid JSON array
+      const itemsArray = data.items.split('\n').filter((item: string) => item.trim() !== "");
+      
       const formattedData = {
-        ...data,
         date: new Date(data.date),
-        items: data.items.split('\n').filter((item: string) => item.trim() !== ""),
+        type: data.type,
+        items: itemsArray,
+        description: data.description || null,
       };
       
       console.log("Sending menu data:", formattedData);
@@ -125,11 +129,15 @@ export default function MenuManagement() {
   const updateMenuMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: any }) => {
       // Convert items string to array and ensure date is a proper Date object
+      const itemsArray = data.items.split('\n').filter((item: string) => item.trim() !== "");
+      
       const formattedData = {
-        ...data,
         date: new Date(data.date),
-        items: data.items.split('\n').filter((item: string) => item.trim() !== ""),
+        type: data.type,
+        items: itemsArray,
+        description: data.description || null,
       };
+      
       console.log("Updating menu data:", formattedData);
       const res = await apiRequest("PUT", `/api/menus/${id}`, formattedData);
       return await res.json();
