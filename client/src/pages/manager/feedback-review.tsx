@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Star, Utensils, BarChart, TrendingUp, TrendingDown } from "lucide-react";
+import { Star, Utensils, BarChart, TrendingUp, TrendingDown, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import {
